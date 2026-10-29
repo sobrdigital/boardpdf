@@ -121,6 +121,6 @@ Use the [copy-and-paste agent prompt](docs/AGENT_PROMPT.md). Project-specific en
 
 Runtime dependencies are pinned: [pdf-lib 1.17.1](https://pdf-lib.js.org/) and [jpeg-js 0.4.4](https://github.com/jpeg-js/jpeg-js). The build replaces jpeg-js's Node Buffer return with `Uint8Array`; tests exercise the bundled paths without Buffer, fetch, or canvas. Third-party licenses are included in `dist/licenses/`.
 
-Licensed under the [MIT License](LICENSE). The repository remains private. Third-party dependencies retain their own licenses, included in `dist/licenses/`.
+Proprietary software, copyright © 2026 SOBR Digital. All rights reserved. Use, modification, redistribution, and resale require separate written authorization. See the [proprietary notice](LICENSE). The repository remains private. Earlier permissions granted for prior versions are not revoked. Third-party dependencies retain their own licenses, included in `dist/licenses/`.
 
 References: [Adobe Imaging API](https://developer.adobe.com/photoshop/uxp/2022/ps-reference/media/imaging/), [manifest v5](https://developer.adobe.com/photoshop/uxp/2022/guides/uxp-guide/uxp-misc/manifest-v5/), [developer tools setup](https://developer.adobe.com/uxp/guides/how-to/developer-tools/), and [pdf-lib API](https://pdf-lib.js.org/docs/api/classes/pdfdocument).

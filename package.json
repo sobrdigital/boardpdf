@@ -15,7 +15,7 @@
     "esbuild": "0.25.12"
   },
   "description": "Offline Photoshop UXP panel for exporting selected artboards as ordered raster PDFs.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=20"
   }
