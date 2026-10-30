@@ -3,7 +3,7 @@
 Copy this prompt into your coding agent after attaching or cloning this repository. Replace the task line with the change you want.
 
 ```text
-Work on the private sobrdigital/boardpdf repository.
+Work on the public, MIT-licensed sobrdigital/boardpdf repository.
 
 Task: [Describe the specific feature, fix, or installation issue here.]
 
