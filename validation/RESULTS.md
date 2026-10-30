@@ -20,3 +20,7 @@ No original PSD file was saved or overwritten. Diagnostic files were written to 
 ## Selection-only panel check
 
 After the selection-only UI update, the actual host reported 46 detected artboards, zero selected Photoshop layers, zero displayed rows, an empty state, and Options collapsed. This verifies that the panel no longer imports all artboards when nothing is selected. Automated tests also cover filtering to a subset and preserving order for retained selected IDs.
+
+## Public-beta branding and controls
+
+On 2026-10-30, the source and bundled build were updated for BoardPDF branding, compact controls, drag feedback, and panel-only Clear all / Remove. The existing 13-test suite and build pass. These new UI changes have not yet received a complete visual Photoshop check.

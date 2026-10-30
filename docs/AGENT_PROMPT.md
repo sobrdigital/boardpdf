@@ -3,7 +3,7 @@
 Copy this prompt into your coding agent after attaching or cloning this repository. Replace the task line with the change you want.
 
 ```text
-Work on the private sobrdigital/artboard-pdf-exporter repository.
+Work on the private sobrdigital/boardpdf repository.
 
 Task: [Describe the specific feature, fix, or installation issue here.]
 
@@ -11,7 +11,7 @@ First read AGENTS.md, README.md, docs/INSTALLATION.md, the relevant source modul
 and validation/RESULTS.md. Inspect the current state before changing anything.
 Follow existing project instructions. Keep changes small and runnable.
 
-This is an Adobe Photoshop UXP panel. Photoshop is not Node.js or a full browser.
+This is BoardPDF by SOBR, an MIT-licensed Adobe Photoshop UXP panel. Photoshop is not Node.js or a full browser.
 Runtime work stays offline, without external services, API keys or helper binaries.
 The committed dist folder must remain ready to load through UXP Developer Tool.
 
@@ -20,7 +20,8 @@ Required behavior:
 - Selected child layers resolve to their parent artboard.
 - An empty Photoshop selection means an empty list.
 - Preserve user page order for retained selected IDs.
-- Keep the interface compact, with secondary controls under Options.
+- Keep the interface compact, with orange/black/white branding and secondary controls under Options.
+- Keep Clear all and Remove local to the plugin list. Sync restores the Photoshop selection.
 - Export only checked pages, in the exact displayed order.
 - Never mutate or close the original PSD.
 - Render via a private temporary duplicate and close only that duplicate safely.

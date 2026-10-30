@@ -1,6 +1,6 @@
 {
-  "name": "artboard-pdf-exporter",
-  "version": "1.0.0",
+  "name": "boardpdf",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "build": "node scripts/build.js",
@@ -14,9 +14,17 @@
   "devDependencies": {
     "esbuild": "0.25.12"
   },
-  "description": "Offline Photoshop UXP panel for exporting selected artboards as ordered raster PDFs.",
-  "license": "UNLICENSED",
+  "description": "BoardPDF by SOBR: export selected Photoshop artboards as ordered PDFs, locally.",
+  "license": "MIT",
   "engines": {
     "node": ">=20"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sobrdigital/boardpdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sobrdigital/boardpdf/issues"
+  },
+  "homepage": "https://github.com/sobrdigital/boardpdf#readme"
 }

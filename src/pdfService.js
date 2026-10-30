@@ -15,5 +15,5 @@ async function add(pdf,pixels,options){
  if(options.transparent){const key=page.node.newXObject('Artboard',image.ref);page.pushOperators(pushGraphicsState(),concatTransformationMatrix(pixels.pageWidth,0,0,pixels.pageHeight,0,0),drawObject(key),popGraphicsState());}
  else page.drawImage(image,{x:0,y:0,width:pixels.pageWidth,height:pixels.pageHeight});
 }
-async function save(pdf){pdf.setProducer('Artboard PDF Exporter / pdf-lib');return pdf.save();}
+async function save(pdf){pdf.setProducer('BoardPDF by SOBR / pdf-lib');return pdf.save();}
 module.exports={create,add,save};

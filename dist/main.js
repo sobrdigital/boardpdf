@@ -23312,7 +23312,7 @@ var require_pdfService = __commonJS({
       } else page.drawImage(image, { x: 0, y: 0, width: pixels.pageWidth, height: pixels.pageHeight });
     }
     async function save(pdf) {
-      pdf.setProducer("Artboard PDF Exporter / pdf-lib");
+      pdf.setProducer("BoardPDF by SOBR / pdf-lib");
       return pdf.save();
     }
     module2.exports = { create, add, save };
@@ -23481,6 +23481,8 @@ function updateMoveControls() {
   const index = rows.findIndex((r) => r.id === activeRow);
   $("moveUp").disabled = busy || index <= 0;
   $("moveDown").disabled = busy || index < 0 || index >= rows.length - 1;
+  $("clearAll").disabled = busy || syncing || !rows.length;
+  $("removeArtboard").disabled = busy || syncing || index < 0;
 }
 function activate(id) {
   activeRow = id;
@@ -23497,6 +23499,11 @@ function draw() {
     el.setAttribute("role", "listitem");
     el.setAttribute("data-id", String(row.id));
     el.onclick = () => activate(row.id);
+    const grip = document.createElement("span");
+    grip.className = "grip";
+    grip.textContent = "\u22EE\u22EE";
+    grip.setAttribute("aria-hidden", "true");
+    el.appendChild(grip);
     const num = document.createElement("span");
     num.className = "page";
     num.textContent = row.selected ? String(++page) : "\xB7";
@@ -23531,9 +23538,18 @@ function draw() {
     el.ondragstart = (e) => {
       drag = row.id;
       activate(row.id);
+      el.classList.add("dragging");
       if (e.dataTransfer) e.dataTransfer.setData("text/plain", String(row.id));
     };
-    el.ondragover = (e) => e.preventDefault();
+    el.ondragover = (e) => {
+      e.preventDefault();
+      if (!busy && drag !== row.id) el.classList.add("dropTarget");
+    };
+    el.ondragleave = () => el.classList.remove("dropTarget");
+    el.ondragend = () => {
+      drag = null;
+      for (const node of $("boards").children) node.classList.remove("dragging", "dropTarget");
+    };
     el.ondrop = (e) => {
       e.preventDefault();
       if (!busy && drag !== null) {
@@ -23546,15 +23562,29 @@ function draw() {
   }
   $("empty").style.display = rows.length ? "none" : "flex";
   $("boards").style.display = rows.length ? "block" : "none";
-  $("orderTools").style.display = rows.length > 1 ? "flex" : "none";
+  $("orderTools").style.display = rows.length ? "flex" : "none";
   $("count").textContent = selected(rows).length + " page" + (selected(rows).length === 1 ? "" : "s");
   $("export").textContent = selected(rows).length ? "Export " + selected(rows).length + " page" + (selected(rows).length === 1 ? "" : "s") + "\u2026" : "Export PDF\u2026";
   $("export").disabled = busy || dirty || !selected(rows).length;
   updateMoveControls();
 }
+function clearArtboards(all = false) {
+  if (busy || syncing) return;
+  const index = rows.findIndex((row) => row.id === activeRow);
+  if (!all && index < 0) return;
+  rows = all ? [] : rows.filter((row) => row.id !== activeRow);
+  activeRow = all ? null : rows[Math.min(index, rows.length - 1)]?.id || null;
+  drag = null;
+  revision++;
+  if (!rows.length) $("empty").querySelector("p").textContent = "Click Sync to restore your Photoshop selection.";
+  draw();
+  if (!dirty || !rows.length) status("");
+  if (rows.some((row) => !row.preview)) previews();
+}
 async function previews() {
   const version = revision;
   for (const row of rows.slice(0, 50)) {
+    if (row.preview) continue;
     if (busy || version !== revision) return;
     try {
       await thumbnailTask.catch(() => {
@@ -23574,6 +23604,7 @@ async function previews() {
 async function usePhotoshopSelection() {
   if (busy || syncing) return;
   syncing = true;
+  updateMoveControls();
   try {
     const current = await documents.snapshot();
     if (current && (!app.documents.length || app.activeDocument.id !== current.id)) return;
@@ -23586,6 +23617,7 @@ async function usePhotoshopSelection() {
     revision++;
     activeRow = rows.some((r) => r.id === activeRow) ? activeRow : rows[0]?.id || null;
     $("document").textContent = current ? current.name : "No document open";
+    $("empty").querySelector("p").textContent = "Select artboards in Photoshop.";
     draw();
     status("");
     if (rows.length) previews();
@@ -23593,6 +23625,7 @@ async function usePhotoshopSelection() {
     status(e.message || String(e), true);
   } finally {
     syncing = false;
+    updateMoveControls();
   }
 }
 async function exportNow() {
@@ -23601,6 +23634,9 @@ async function exportNow() {
   revision++;
   token = { cancelled: false };
   for (const el of $("controls").querySelectorAll("input,select")) el.disabled = true;
+  $("advanced").style.display = "none";
+  $("advancedToggle").setAttribute("aria-expanded", "false");
+  $("advancedToggle").textContent = "Options";
   $("fromPhotoshop").disabled = true;
   $("advancedToggle").disabled = true;
   $("cancel").style.display = "block";
@@ -23610,7 +23646,7 @@ async function exportNow() {
   try {
     await thumbnailTask.catch(() => {
     });
-    if (dirty || documents.fingerprint(await documents.snapshot()) !== documents.fingerprint(doc)) throw Error("Artwork changed. Click Update selection before exporting.");
+    if (dirty || documents.fingerprint(await documents.snapshot()) !== documents.fingerprint(doc)) throw Error("Artwork changed. Click Sync before exporting.");
     const options = read();
     apply(options);
     store.save(options);
@@ -23647,11 +23683,13 @@ function changed() {
   dirty = true;
   revision++;
   $("export").disabled = true;
-  status("Artwork changed. Update selection to refresh.");
+  status("Artwork changed. Click Sync to refresh.");
 }
 function init() {
   apply(store.load());
   $("fromPhotoshop").onclick = usePhotoshopSelection;
+  $("clearAll").onclick = () => clearArtboards(true);
+  $("removeArtboard").onclick = () => clearArtboards(false);
   $("moveUp").onclick = () => {
     rows = move(rows, activeRow, -1);
     draw();
@@ -23667,6 +23705,13 @@ function init() {
     }
   };
   $("export").onclick = exportNow;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      $("advanced").style.display = "none";
+      $("advancedToggle").setAttribute("aria-expanded", "false");
+      $("advancedToggle").textContent = "Options";
+    }
+  });
   $("advancedToggle").onclick = () => {
     const expanded = $("advancedToggle").getAttribute("aria-expanded") === "true";
     $("advancedToggle").setAttribute("aria-expanded", String(!expanded));

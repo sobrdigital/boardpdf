@@ -20,3 +20,5 @@ Status: limited real-host checks were executed on Photoshop 27.11.0/macOS, recor
 16. Dock/reload: dock and resize to minimum width. Test keyboard focus, checkbox activation, the Move up / Move down toolbar and drag fallback on both operating systems. Reload through UDT. Confirm settings persist and document discovery reruns.
 17. Source integrity: after each export, compare saved PSD hash where practical, history-state count, active document, layer visibility, selection, lock state, and positions. No document mutation should occur.
 18. Package: package through UDT, install `.ccx` on a clean machine and repeat cases 1, 2, 6, 9 and 11 without network access.
+
+19. Clear list: import three selected artboards. Click a row, then Remove. Only that row should disappear, including when removing the last row. Clear all should empty the list and disable export. Wait through selection polling; rows must stay cleared while Photoshop selection is unchanged. Sync must restore the current Photoshop selection. Confirm no source layer is deleted or deselected.

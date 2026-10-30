@@ -10,3 +10,5 @@ build-meta.json
 *.ccx
 validation/*
 !validation/RESULTS.md
+/launch/
+/release/

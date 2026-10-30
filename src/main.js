@@ -12,31 +12,44 @@ function status(message,error=false){$('status').textContent=message;$('status')
 function read(){return settings(Object.fromEntries(['preset','quality','dpi','transparent','background','mode','filename'].map(id=>[id,$(id).type==='checkbox'?$(id).checked:$(id).value])));}
 function apply(s){for(const key of ['preset','quality','dpi','transparent','background','mode','filename']){if($(key).type==='checkbox')$(key).checked=s[key];else $(key).value=String(s[key]);}$('quality').disabled=s.transparent;$('background').disabled=s.transparent;}
 function selectionStamp(){if(!app.documents.length)return 'none';return app.activeDocument.id+':'+app.activeDocument.activeLayers.map(l=>l.id).join(',');}
-function updateMoveControls(){const index=rows.findIndex(r=>r.id===activeRow);$('moveUp').disabled=busy||index<=0;$('moveDown').disabled=busy||index<0||index>=rows.length-1;}
+function updateMoveControls(){const index=rows.findIndex(r=>r.id===activeRow);$('moveUp').disabled=busy||index<=0;$('moveDown').disabled=busy||index<0||index>=rows.length-1;$('clearAll').disabled=busy||syncing||!rows.length;$('removeArtboard').disabled=busy||syncing||index<0;}
 function activate(id){activeRow=id;for(const el of $('boards').children)el.className=Number(el.getAttribute('data-id'))===id?'board active':'board';updateMoveControls();}
 function draw(){
  $('boards').innerHTML='';let page=0;
  for(const row of rows){
  const el=document.createElement('div');el.className=row.id===activeRow?'board active':'board';el.draggable=!busy;el.setAttribute('role','listitem');el.setAttribute('data-id',String(row.id));el.onclick=()=>activate(row.id);
+ const grip=document.createElement('span');grip.className='grip';grip.textContent='⋮⋮';grip.setAttribute('aria-hidden','true');el.appendChild(grip);
  const num=document.createElement('span');num.className='page';num.textContent=row.selected?String(++page):'·';el.appendChild(num);
  const check=document.createElement('input');check.type='checkbox';check.checked=row.selected;check.disabled=busy;check.setAttribute('aria-label','Include '+row.name);check.onchange=()=>{row.selected=check.checked;activeRow=row.id;draw();};check.onfocus=()=>activate(row.id);el.appendChild(check);
  const frame=document.createElement('div');frame.className='preview';if(row.preview){const img=document.createElement('img');img.src=row.preview;img.alt='Preview of '+row.name;frame.appendChild(img);}el.appendChild(frame);
  const label=document.createElement('div');label.className='name';label.textContent=row.name;const dims=dimensions(row,doc.resolution,read().dpi);label.title=row.name+' · '+dims.width+' × '+dims.height+' px';el.appendChild(label);
- el.ondragstart=e=>{drag=row.id;activate(row.id);if(e.dataTransfer)e.dataTransfer.setData('text/plain',String(row.id));};el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();if(!busy&&drag!==null){rows=move(rows,drag,rows.findIndex(r=>r.id===row.id)-rows.findIndex(r=>r.id===drag));draw();}drag=null;};$('boards').appendChild(el);
+ el.ondragstart=e=>{drag=row.id;activate(row.id);el.classList.add('dragging');if(e.dataTransfer)e.dataTransfer.setData('text/plain',String(row.id));};el.ondragover=e=>{e.preventDefault();if(!busy&&drag!==row.id)el.classList.add('dropTarget');};el.ondragleave=()=>el.classList.remove('dropTarget');el.ondragend=()=>{drag=null;for(const node of $('boards').children)node.classList.remove('dragging','dropTarget');};el.ondrop=e=>{e.preventDefault();if(!busy&&drag!==null){rows=move(rows,drag,rows.findIndex(r=>r.id===row.id)-rows.findIndex(r=>r.id===drag));draw();}drag=null;};$('boards').appendChild(el);
  }
- $('empty').style.display=rows.length?'none':'flex';$('boards').style.display=rows.length?'block':'none';$('orderTools').style.display=rows.length>1?'flex':'none';
+ $('empty').style.display=rows.length?'none':'flex';$('boards').style.display=rows.length?'block':'none';$('orderTools').style.display=rows.length?'flex':'none';
  $('count').textContent=selected(rows).length+' page'+(selected(rows).length===1?'':'s');$('export').textContent=selected(rows).length?'Export '+selected(rows).length+' page'+(selected(rows).length===1?'':'s')+'…':'Export PDF…';$('export').disabled=busy||dirty||!selected(rows).length;updateMoveControls();
+}
+function clearArtboards(all=false){
+ if(busy||syncing)return;
+ const index=rows.findIndex(row=>row.id===activeRow);
+ if(!all&&index<0)return;
+ rows=all?[]:rows.filter(row=>row.id!==activeRow);
+ activeRow=all?null:rows[Math.min(index,rows.length-1)]?.id||null;
+ drag=null;revision++;
+ if(!rows.length)$('empty').querySelector('p').textContent='Click Sync to restore your Photoshop selection.';
+ draw();if(!dirty||!rows.length)status('');
+ if(rows.some(row=>!row.preview))previews();
 }
 async function previews(){
  const version=revision;
  for(const row of rows.slice(0,50)){
+  if(row.preview)continue;
   if(busy||version!==revision)return;
   try{await thumbnailTask.catch(()=>{});if(busy||version!==revision)return;thumbnailTask=thumbnail(doc,row);const url=await thumbnailTask;if(version!==revision)return;row.preview=url;draw();}
   catch(e){console.warn('Thumbnail '+row.id+': '+(e.message||String(e)));if(version===revision)status('Some previews are unavailable.',true);}
  }
 }
 async function usePhotoshopSelection(){
- if(busy||syncing)return;syncing=true;
+ if(busy||syncing)return;syncing=true;updateMoveControls();
  try{
  const current=await documents.snapshot();
  if(current&&(!app.documents.length||app.activeDocument.id!==current.id))return;
@@ -44,17 +57,18 @@ async function usePhotoshopSelection(){
  const previous=doc&&current&&doc.id===current.id?rows:[];
  doc=current;rows=current?selectionRows(current.boards,ids,previous):[];
  lastSelection=selectionStamp();dirty=false;revision++;activeRow=rows.some(r=>r.id===activeRow)?activeRow:rows[0]?.id||null;
- $('document').textContent=current?current.name:'No document open';draw();status('');
+ $('document').textContent=current?current.name:'No document open';$('empty').querySelector('p').textContent='Select artboards in Photoshop.';draw();status('');
  if(rows.length)previews();
- }catch(e){status(e.message||String(e),true);}finally{syncing=false;}
+ }catch(e){status(e.message||String(e),true);}finally{syncing=false;updateMoveControls();}
 }
 async function exportNow(){
  if(busy||!selected(rows).length)return;busy=true;revision++;token={cancelled:false};
  for(const el of $('controls').querySelectorAll('input,select'))el.disabled=true;
+ $('advanced').style.display='none';$('advancedToggle').setAttribute('aria-expanded','false');$('advancedToggle').textContent='Options';
  $('fromPhotoshop').disabled=true;$('advancedToggle').disabled=true;$('cancel').style.display='block';$('cancel').disabled=false;$('progress').style.display='block';draw();
  try{
  await thumbnailTask.catch(()=>{});
- if(dirty||documents.fingerprint(await documents.snapshot())!==documents.fingerprint(doc))throw Error('Artwork changed. Click Update selection before exporting.');
+ if(dirty||documents.fingerprint(await documents.snapshot())!==documents.fingerprint(doc))throw Error('Artwork changed. Click Sync before exporting.');
  const options=read();apply(options);store.save(options);
  const outputs=await exporter.prepare(doc,rows,options,token,(value,message)=>{$('progress').value=value*.9;status(message);});
  if(token.cancelled)throw Error('Export cancelled.');
@@ -64,11 +78,13 @@ async function exportNow(){
  busy=false;for(const el of $('controls').querySelectorAll('input,select'))el.disabled=false;apply(read());$('fromPhotoshop').disabled=false;$('advancedToggle').disabled=false;$('cancel').style.display='none';$('progress').style.display='none';draw();
  }
 }
-function changed(){if(busy||!rows.length)return;dirty=true;revision++;$('export').disabled=true;status('Artwork changed. Update selection to refresh.');}
+function changed(){if(busy||!rows.length)return;dirty=true;revision++;$('export').disabled=true;status('Artwork changed. Click Sync to refresh.');}
 function init(){
  apply(store.load());$('fromPhotoshop').onclick=usePhotoshopSelection;
+ $('clearAll').onclick=()=>clearArtboards(true);$('removeArtboard').onclick=()=>clearArtboards(false);
  $('moveUp').onclick=()=>{rows=move(rows,activeRow,-1);draw();};$('moveDown').onclick=()=>{rows=move(rows,activeRow,1);draw();};
  $('cancel').onclick=()=>{if(token&&!token.committing){token.cancelled=true;status('Cancelling…');}};$('export').onclick=exportNow;
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('advanced').style.display='none';$('advancedToggle').setAttribute('aria-expanded','false');$('advancedToggle').textContent='Options';}});
  $('advancedToggle').onclick=()=>{const expanded=$('advancedToggle').getAttribute('aria-expanded')==='true';$('advancedToggle').setAttribute('aria-expanded',String(!expanded));$('advanced').style.display=expanded?'none':'block';$('advancedToggle').textContent=expanded?'Options':'Hide options';};
  $('preset').onchange=()=>{const p=PRESETS[$('preset').value];if(p){apply(settings({...read(),...p}));store.save(read());draw();}};
  for(const id of ['quality','dpi','transparent','background','mode','filename'])$(id).onchange=()=>{const s=read();apply(s);store.save(s);draw();};
